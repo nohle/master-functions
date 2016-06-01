@@ -1,0 +1,334 @@
+\documentclass[aps,prd,preprint,eqsecnum,tightenlines,nofootinbib,showpacs]{revtex4}
+
+%\usepackage{graphicx,epsf}
+\usepackage[dvips]{graphicx}
+\usepackage{epsf,subfigure}
+\usepackage{amsfonts,amsmath}
+\usepackage{relsize}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{verbatim}
+\usepackage{hyperref}
+\usepackage[makeroom]{cancel}
+
+\flushbottom
+\renewcommand{\textfraction}{0}
+\renewcommand{\topfraction}{1}
+\renewcommand{\bottomfraction}{1}
+
+\def\Eqn#1{Eq.~({\ref{#1}})}
+\def\eqn#1{Eq.~({\ref{#1}})}
+\def\eqns#1#2{Eqs.~({\ref{#1}}) and~({\ref{#2}})} 
+\def\sect#1{Section~{\ref{#1}}}
+\def\sects#1#2{Sections~\ref{#1} and~\ref{#2}}
+
+
+\begin{document} 
+
+\section{\texttt{T\lowercase{ensor}R\lowercase{educe}} Demonstration}
+
+In \sect{explained}, we motivate and expound upon the tensor reduction procedure, but
+let us first demonstrate how the \texttt{TensorReduce} function is used (for those in the know). 
+Consider the following four-point, three-loop integral in $D = 4-2\epsilon$
+dimensions, i.e., four space-time dimensions with dimensional regularization:
+%
+\begin{align}
+\int 
+\frac{d^{4-2\epsilon}\ell_{1}}{(2\pi)^{4-2\epsilon}}
+\frac{d^{4-2\epsilon}\ell_{2}}{(2\pi)^{4-2\epsilon}}
+\frac{d^{4-2\epsilon}\ell_{3}}{(2\pi)^{4-2\epsilon}}
+\,\,
+\frac{
+(\ell_{1}\cdot k_{1})(\ell_{1}\cdot\varepsilon_{2})(\ell_{1}\cdot\varepsilon_{3})
+(\ell_{2}\cdot k_{2})(\ell_{2}\cdot\varepsilon_{1})(\ell_{2}\cdot\varepsilon_{4})
+(\ell_{3}\cdot k_{1})(\ell_{3}\cdot k_{3})}
+{(\ell_{1}^{2}-m^{2})^{4} (\ell_{2}^{2}-m^{2})^{4} (\ell_{3}^{2}-m^{2})^{2}}\,,
+\label{full}
+\end{align}
+%
+where $\ell_{i}$ are independent loop momenta, $k_{i}$ are external momenta,
+$\varepsilon_{i}$ are external polarization vectors and $m$ is a uniform mass
+regulator, used to regulate infrared divergences.
+We can determine the tensor reduction of the numerator using the
+\texttt{TensorReduce} function from our \texttt{Mathematica} package \texttt{MasterFunctions}. 
+In the \texttt{Wolfram Language} (\texttt{Mathematica}), we reduce the numerator of \eqn{full} as follows:
+\begin{align}
+&\texttt{numerator = lk[1,1]le[1,2]le[1,3]lk[2,2]le[2,1]le[2,4]lk[3,1]lk[3,3];}\nonumber\\
+&\texttt{reduction = TensorReduce[ numerator ];} \nonumber\\
+&\texttt{reducedNumerator = Plus@@( Times@@@reduction );}
+\label{codeEx}
+\end{align}
+For this example, \texttt{reduction} is a $6\times2$ matrix, where the first column corresponds 
+to the six unique scalar products of loop momenta,
+\begin{align}
+&\ell_{1}^{2} \, (\ell_{1}\cdot\ell_{2}) \, \ell_{2}^{2} \, \ell_{3}^{2} \,,
+&&(\ell_{1}\cdot\ell_{2}) \, (\ell_{1}\cdot\ell_{3})^{2} \, \ell_{2}^{2} \,,
+&&\ell_{1}^{2}\, (\ell_{1}\cdot\ell_{3})\, \ell_{2}^{2}\, \ell_{3}^{2} \,,
+\nonumber\\[.2cm]
+&(\ell_{1}\cdot\ell_{2})^{3}\, \ell_{3}^{2} \,,
+&&(\ell_{1}\cdot\ell_{2})^{2}\, (\ell_{1}\cdot\ell_{3})\, (\ell_{2}\cdot\ell_{3}) \,,
+&&\ell_{1}^{2}\, (\ell_{1}\cdot\ell_{2})\, (\ell_{2}\cdot\ell_{3})^{2} \,,
+\label{scalar0}
+\end{align}
+and the second column of \texttt{reduction} corresponds to their
+coefficients after tensor reduction.The last
+line of \eqn{codeEx} multiples the scalar products by their appropriate coefficients
+before summing them. (This explicit step can be circumvented in practice.) 
+The final reduced numerator will integrate to the same result
+as the original numerator of \eqn{full}.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{\texttt{T\lowercase{ensor}R\lowercase{educe}} Performance}
+\label{performance}
+
+Often we will encounter not just a single integral but millions of integrals like
+\eqn{full}. To compound the problem, at high loop orders, each integral can involve
+millions of calls to a metric contraction subroutine in order to generate systems of linear equations.
+Then, these often-complicated systems must be solved analytically. While one may need
+to trade the \texttt{Wolfram Language} for \texttt{C++} once the problem becomes sufficiently
+large, we push the \texttt{Wolfram Language} as far as we can here. This allows for
+the convenience of a seamless interface with our existing \texttt{MasterFunctions} tools.
+
+First, when a sum  of many numerator expressions (as opposed to the single term of \eqn{codeEx}) is passed into \texttt{TensorReduce}, the function gathers like terms to avoid performing duplicate work. Furthermore,
+it distills and canonicalizes the input expressions into the minimal amount of necessary data. For instance, \eqn{codeEx} is distilled into \texttt{\{3,3,2\}}. This reflects the fact that  there are three, 
+three and two occurrences of different loop momenta in the numerator. We are always able to sort these 
+lists as well without losing information. For example, \texttt{le[2,1]lk[1,2]le[1,3]le[1,4]le[2,2]lk[1,1]} and \texttt{lk[2,1]le[1,2]le[2,3]le[1,4]le[2,1]lk[2,3]} would both
+be processed as \texttt{\{4,2\}}.
+
+Once a reduction is processed, the final and intermediate results are saved 
+in \texttt{MasterFunctions/aux/tensorReduction/} for later retrieval. We will discuss the intermediate
+steps below, but we note here that the example of \eqn{codeEx} saves six results: 
+\texttt{12.m} will be stored in
+the \texttt{splitByTwos} subdirectory (since we deal with a total of twelve powers of loop momenta),
+and different files named \texttt{3.3.2.m} will be stored in the subdirectories
+\texttt{tensorStructs}, \texttt{scalarProducts}, \texttt{tensorContractions}, \texttt{equations}
+and \texttt{solutions}.
+
+Nearly all of our subroutines harness the parallel computing capabilities of the \texttt{Wolfram Language}.
+Namely, the \texttt{ParallelTable} function is used generously. Furthermore, we devote special care to
+the subroutine \texttt{ContractionCycles}, the real workhorse of the tensor reduction. This subroutine
+handles metric tensor contractions and  might be called millions of times per integral for millions of integrals.
+We reduce the problem of contracting metric tensors to that of finding the number of 
+connected components in an undirected graph. By writing an efficient algorithm with good constants
+and using the \texttt{Compile} feature to generate precompiled \texttt{C} code, we can speed up
+the computation by at least a factor of ten compared to native functions in the \texttt{Wolfram Language}.
+
+%%%%%%%%%%%%%%%%
+\section{Tensor Reduction Explained}
+\label{explained}
+
+Let us now motivate and expound upon the tensor reduction procedure. \Eqn{full} will again be
+used as the working example. Note that all of the functions that we mention below are private;
+\texttt{TensorReduce} is the only public function.
+
+First, to see the tensor nature of \eqn{full}, we strip off the external momenta, $k_{i}$, and polarization vectors, $\varepsilon_{i}$. This leaves a tensor integral depending on only the loop momenta and a uniform mass regulator, $m$,
+\begin{align}
+\mathcal{I}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}
+\equiv
+\int 
+\frac{d^{4-2\epsilon}\ell_{1}}{(2\pi)^{4-2\epsilon}}
+\frac{d^{4-2\epsilon}\ell_{2}}{(2\pi)^{4-2\epsilon}}
+\frac{d^{4-2\epsilon}\ell_{3}}{(2\pi)^{4-2\epsilon}}
+\,\,
+\frac{
+\ell_{1}^{\mu_{1}}\, \ell_{1}^{\mu_{2}}\, \ell_{1}^{\mu_{3}}\,
+\ell_{2}^{\nu_{1}}\, \ell_{2}^{\nu_{2}}\, \ell_{2}^{\nu_{3}}\,
+\ell_{3}^{\rho_{1}}\, \ell_{3}^{\rho_{2}}
+}
+{(\ell_{1}^{2}-m^{2})^{4} (\ell_{2}^{2}-m^{2})^{4} (\ell_{3}^{2}-m^{2})^{2}} \,.
+\label{tensor}
+\end{align}
+%
+We can decompose this integral into a sum of scalar integrals (with tensor coefficients),
+which are much easier to evaluate. By exploiting Lorentz invariance, we know that the only possible 
+tensors present after integration are Minkowski metric tensors, $\eta^{\alpha\beta}$.
+
+Therefore, we need to find the possible products of metric tensors that pair all of the Lorentz indices
+of \eqn{tensor}. The function \texttt{SplitByTwos}---called by \texttt{GetSBT} if a saved result
+cannot be retrieved---is a simple recursive function (taken from Tristan Dennen)
+that constructs all possible pairings of indices. In our example, the indices of \eqn{tensor}
+can be paired 105 ways as,
+\begin{align}
+&\mu_{1}, \mu_{2}, \mu_{3}, \nu_{1},\nu_{2},\nu_{3},\rho_{1},\rho_{2} \nonumber\\[.2cm]
+&\hspace{1cm}\rightarrow
+\eta^{\mu_{1}\mu_{2}}\eta^{\mu_{3}\nu_{1}}\eta^{\nu_{2}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
+,\, \eta^{\mu_{1}\mu_{2}}\eta^{\mu_{3}\nu_{1}}\eta^{\nu_{2}\rho_{1}}\eta^{\nu_{3}\rho_{2}}
+,\, \ldots
+,\, \eta^{\mu_{1}\rho_{2}}\eta^{\mu_{2}\rho_{1}}\eta^{\mu_{3}\nu_{3}}\eta^{\nu_{1}\nu_{2}}
+\,.
+\end{align}
+
+However, we also see that the final tensor expressions must be totally symmetric under 
+the interchanges,
+%
+\begin{align}
+\mu_{1}\leftrightarrow\mu_{2}\leftrightarrow\mu_{3}\,, \hspace{1cm}
+\nu_{1}\leftrightarrow\nu_{2}\leftrightarrow\nu_{3}\,,\hspace{1cm}
+\rho_{1}\leftrightarrow\rho_{2}\,.
+\label{symconstraint}
+\end{align}
+%
+The function \texttt{GetTensorStructs} handles this constraint. It first searches for a
+saved result, and if one cannot be found, generates and saves the appropriate tensors.
+For the example of \eqn{tensor}, it returns six tensors, 
+$T_{i}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$,
+that are sums of products of metric tensors that obey \eqn{symconstraint}.
+For instance,
+%
+\begin{align}
+T_{1}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}} &\equiv
+\phantom{+}\eta^{\mu_{1}\mu_{2}}\eta^{\mu_{3}\nu_{1}}\eta^{\nu_{2}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
++ \eta^{\mu_{1}\mu_{2}}\eta^{\mu_{3}\nu_{2}}\eta^{\nu_{1}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
++ \eta^{\mu_{1}\mu_{2}}\eta^{\mu_{3}\nu_{3}}\eta^{\nu_{1}\nu_{2}}\eta^{\rho_{1}\rho_{2}}
+\nonumber\\ &\phantom{\equiv\, } +
+\eta^{\mu_{1}\mu_{3}}\eta^{\mu_{2}\nu_{1}}\eta^{\nu_{2}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
++ \eta^{\mu_{1}\mu_{3}}\eta^{\mu_{2}\nu_{2}}\eta^{\nu_{1}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
++ \eta^{\mu_{1}\mu_{3}}\eta^{\mu_{2}\nu_{3}}\eta^{\nu_{1}\nu_{2}}\eta^{\rho_{1}\rho_{2}}
+\nonumber\\ &\phantom{\equiv\, } +
+\eta^{\mu_{2}\mu_{3}}\eta^{\mu_{1}\nu_{1}}\eta^{\nu_{2}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
++ \eta^{\mu_{2}\mu_{3}}\eta^{\mu_{1}\nu_{2}}\eta^{\nu_{1}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
++ \eta^{\mu_{2}\mu_{3}}\eta^{\mu_{1}\nu_{3}}\eta^{\nu_{1}\nu_{3}}\eta^{\rho_{1}\rho_{2}}
+\,.
+\label{T1}
+\end{align}
+%
+
+Notice that every summand of \eqn{T1} contracts the tensor numerator into the 
+same scalar product. So, we can think of 
+$T_{1}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$ 
+as the sum of all elements of an equivalence class that contracts 
+$\ell_{1}^{\mu_{1}}\, \ell_{1}^{\mu_{2}}\, \ell_{1}^{\mu_{3}}\,
+\ell_{2}^{\nu_{1}}\, \ell_{2}^{\nu_{2}}\, \ell_{2}^{\nu_{3}}\,
+\ell_{3}^{\rho_{1}}\, \ell_{3}^{\rho_{2}}$
+into $\ell_{1}^{2} \, (\ell_{1}\cdot\ell_{2}) \, \ell_{2}^{2} \, \ell_{3}^{2}$.
+In other words, for any representative of 
+$T_{1}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$,
+%
+\begin{align}
+\left.T_{1\,\,\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\right|_{\text{representative}}
+\,\,
+\ell_{1}^{\mu_{1}}\, \ell_{1}^{\mu_{2}}\, \ell_{1}^{\mu_{3}}\,
+\ell_{2}^{\nu_{1}}\, \ell_{2}^{\nu_{2}}\, \ell_{2}^{\nu_{3}}\,
+\ell_{3}^{\rho_{1}}\, \ell_{3}^{\rho_{2}}
+\,\,=\,\,
+\ell_{1}^{2} \, (\ell_{1}\cdot\ell_{2}) \, \ell_{2}^{2} \, \ell_{3}^{2}\,.
+\end{align}
+%
+From the tensor structures $T_{i}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$,
+we can then find all possible scalar product structures (also shown in \eqn{scalar0}),
+\begin{align}
+&S_{1}\equiv\ell_{1}^{2} \, (\ell_{1}\cdot\ell_{2}) \, \ell_{2}^{2} \, \ell_{3}^{2} \,,
+&&S_{2}\equiv(\ell_{1}\cdot\ell_{2}) \, (\ell_{1}\cdot\ell_{3})^{2} \, \ell_{2}^{2} \,,
+&&S_{3}\equiv\ell_{1}^{2}\, (\ell_{1}\cdot\ell_{3})\, \ell_{2}^{2}\, \ell_{3}^{2} \,,
+\nonumber\\[.2cm]
+&S_{4}\equiv(\ell_{1}\cdot\ell_{2})^{3}\, \ell_{3}^{2} \,,
+&&S_{5}\equiv(\ell_{1}\cdot\ell_{2})^{2}\, (\ell_{1}\cdot\ell_{3})\, (\ell_{2}\cdot\ell_{3}) \,,
+&&S_{6}\equiv\ell_{1}^{2}\, (\ell_{1}\cdot\ell_{2})\, (\ell_{2}\cdot\ell_{3})^{2} \,,
+\label{scalar}
+\end{align}
+where we defined,
+%
+\begin{align}
+S_{i}
+\,\,\equiv\,\,
+\left.T_{i\,\,\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\right|_{\text{rep.}}
+\,\,
+\ell_{1}^{\mu_{1}}\, \ell_{1}^{\mu_{2}}\, \ell_{1}^{\mu_{3}}\,
+\ell_{2}^{\nu_{1}}\, \ell_{2}^{\nu_{2}}\, \ell_{2}^{\nu_{3}}\,
+\ell_{3}^{\rho_{1}}\, \ell_{3}^{\rho_{2}}
+\,.
+\label{TS}
+\end{align}
+%
+The function
+\texttt{GetScalarProducts} returns all such scalar products, again saving the results for later retrieval.
+
+Now that we have the tensor and scalar building blocks, which are respectively independent of loop momenta and solely dependent on loop momenta, we are prepared to construct an ansatz for the form 
+of the tensor-reduced numerator:
+\begin{align}
+\ell_{1}^{\mu_{1}}\, \ell_{1}^{\mu_{2}}\, \ell_{1}^{\mu_{3}}\,
+\ell_{2}^{\nu_{1}}\, \ell_{2}^{\nu_{2}}\, \ell_{2}^{\nu_{3}}\,
+\ell_{3}^{\rho_{1}}\, \ell_{3}^{\rho_{2}}
+\rightarrow
+&\hspace{.6cm}
+C_{1}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,
+S_{1}
+\,+\,
+C_{2}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,
+S_{2}
+\nonumber\\[.05cm]&
++\,
+C_{3}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,
+S_{3}
+\,+\,
+C_{4}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,
+S_{4}
+\nonumber\\[.05cm]&
++\,
+C_{5}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,
+S_{5}
+\,+\,
+C_{6}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,
+S_{6}
+\,,
+\label{ansatz}
+\end{align}
+where the tensor coefficients $C_{i}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$
+are linear combinations of the building blocks
+$T_{j}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$.
+More specifically, we define $C_{i}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}$
+as,
+%
+\begin{align}
+C_{i}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}
+\equiv
+\sum_{j=1}^{6}a_{ij}\,
+T_{j}^{\mu_{1}\mu_{2}\mu_{3}|\nu_{1}\nu_{2}\nu_{3}|\rho_{1}\rho_{2}}\,,
+\label{Cdef}
+\end{align}
+%
+where $a_{ij}$ can only depend on rational numbers and $D_{s}\equiv \eta^{\alpha}_{\phantom{\alpha}\alpha}$, the trace of the metric tensor. We can think of $D_{s}$ as related to the dimension $D$,
+but it is important to leave this quantity symbolic because of dimensional regularization.
+
+Be careful with the ansatz of \eqn{ansatz}. There are a lot of 6's floating around. 
+Whereas $T_{i}$ is directly related
+to $S_{i}$ (see \eqn{TS}), $C_{i}$ is a linear combination of all $T_{j}$'s. Our final,
+and most computationally-intensive, step it to find the exact relationship between $C_{i}$'s and
+$T_{j}$'s, i.e., to uniquely fix $a_{ij}$ for all $i,j = 1,2,\ldots,6$. This requires us to construct
+and solve a system of 36 linearly-independent equations.
+
+The system of equations can be constructed from \eqn{ansatz} by contracting both sides by 
+a representative from each $T_{i}$, noting the definition of $S_{i}$ in \eqn{TS}.
+Thus, to match the RHS of \eqn{ansatz} with the LHS, we demand that (denoting the lengthy index 
+contraction by $\cdot$),
+%
+\begin{align}
+\left.T_{i}\right|_{\text{rep.}}\cdot C_{j} = \delta_{ij}\,,
+\end{align}
+where $\delta_{ij}$ is the Kronecker delta. Substituting the definition of $C_{j}$ from \eqn{Cdef}, this constraint reads,
+\begin{align}
+\sum_{k=1}^{6}a_{jk}\left(\left.T_{i}\right|_{\text{rep.}}\cdot T_{k}\right) = \delta_{ij}\,,
+\hspace{.5cm}
+\forall\,\, i,j = 1,2,\ldots, 6\,.
+\label{eqGen}
+\end{align}
+%
+Note that we could equivalently choose to contract with the full $T_{i}$ tensor instead of a representative,
+but this would be unnecessary work and would require a symmetry factor. If we use one representative
+for $T_{i}$, then we must contract with all summands of $T_{k}$ or vice versa. The tensor contraction
+of \eqn{eqGen} is carried out by the function \texttt{GetContractions}, with the subroutine
+\texttt{ContractionCycles} performing the heavy lifting, as discussed in \sect{performance}. The function
+\texttt{GetEqs} fully assembles the equations. Finally, \texttt{GetSoln} solves the equations for $a_{ij}$, 
+uniquely defining the tensor-reduction replacement given in \eqn{ansatz}. Because of the need to keep $D_{s}$ symbolic in the equations instead of numeric, the equation solving can be cumbersome
+and appears to currently be the bottleneck at high loop orders.
+
+After the tensor reduction, industrial-grade machinery such as \texttt{FIRE5}
+(\href{https://arxiv.org/abs/1408.2372}{arXiv:1408.2372}) can be used to simplify the scalar integrals
+into a basis of integrals using integration-by-parts (IBP) relations.
+
+
+
+
+\end{document}
+
